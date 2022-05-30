@@ -11,12 +11,14 @@ from websocket import WebSocket
 
 
 class AnyRunTask:
-    _ws_base_url: str = 'wss://app.any.run/sockjs'
-    _content_base_url: str = 'https://content.any.run/tasks/{task_uuid}/download/files/{object_id}'
-    _default_zip_password: bytes = b'infected'
+    _ws_base_url: str = "wss://app.any.run/sockjs"
+    _content_base_url: str = (
+        "https://content.any.run/tasks/{task_uuid}/download/files/{object_id}"
+    )
+    _default_zip_password: bytes = b"infected"
 
     _headers: dict[str, str] = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36",
     }
 
     def __init__(self, uuid: str, login_token: str = None) -> None:
@@ -28,7 +30,7 @@ class AnyRunTask:
         server: int = random.randint(1, 999)
         suffix: str = utils.gen_rand_str(8)
 
-        return f'{cls._ws_base_url}/{server}/{suffix}/websocket'
+        return f"{cls._ws_base_url}/{server}/{suffix}/websocket"
 
     @classmethod
     def _new_websocket_connection(cls) -> WebSocket:
@@ -41,13 +43,11 @@ class AnyRunTask:
         # Second skip is server id
         ws.recv()
 
-        cls._send_json_object(ws, {
-            'msg': 'connect',
-            'version': '1',
-            'support': ['1', 'pre2', 'pre1']
-        })
+        cls._send_json_object(
+            ws, {"msg": "connect", "version": "1", "support": ["1", "pre2", "pre1"]}
+        )
 
-        assert cls._parse_json_response(ws.recv()).get('msg') == 'connected'
+        assert cls._parse_json_response(ws.recv()).get("msg") == "connected"
 
         return ws
 
@@ -65,24 +65,30 @@ class AnyRunTask:
     def _subscribe(cls, ws: WebSocket, name: str, params: list) -> list[dict]:
         sub_id = utils.gen_rand_str(17)
 
-        cls._send_json_object(ws, {
-            'msg': 'sub',
-            'id': sub_id,
-            'name': name,
-            'params': params,
-        })
+        cls._send_json_object(
+            ws,
+            {
+                "msg": "sub",
+                "id": sub_id,
+                "name": name,
+                "params": params,
+            },
+        )
 
         result = []
 
-        while (response := cls._parse_json_response(ws.recv())).get('subs') != [sub_id]:
+        while (response := cls._parse_json_response(ws.recv())).get("subs") != [sub_id]:
             result.append(response)
 
-        cls._send_json_object(ws, {
-            'msg': 'unsub',
-            'id': sub_id,
-        })
+        cls._send_json_object(
+            ws,
+            {
+                "msg": "unsub",
+                "id": sub_id,
+            },
+        )
 
-        while (response := cls._parse_json_response(ws.recv())).get('msg') != 'nosub':
+        while (response := cls._parse_json_response(ws.recv())).get("msg") != "nosub":
             pass
 
         return result
@@ -90,82 +96,100 @@ class AnyRunTask:
     def __getstate__(self):
         state = self.__dict__.copy()
 
-        state.pop('_ws', None)
+        state.pop("_ws", None)
 
         return state
 
     def _get_task_id(self) -> str:
-        response = self._subscribe(self._ws, 'taskexists', [self.uuid])
+        response = self._subscribe(self._ws, "taskexists", [self.uuid])
 
-        return response[0]['fields']['taskObjectId']['$value']
+        return response[0]["fields"]["taskObjectId"]["$value"]
 
     def _get_processes(self) -> list[dict]:
-        return self._subscribe(self._ws, 'process', [
-            {
-                'taskID': {
-                    '$type': 'oid',
-                    '$value': self.id,
-                },
-                'status': 100,
-                'important': True,
-            }
-        ])
+        return self._subscribe(
+            self._ws,
+            "process",
+            [
+                {
+                    "taskID": {
+                        "$type": "oid",
+                        "$value": self.id,
+                    },
+                    "status": 100,
+                    "important": True,
+                }
+            ],
+        )
 
     def _get_sample_uuid(self) -> str:
-        response = self._subscribe(self._ws, 'singleTask',
-            [{'$type': 'oid', '$value': self.id}, False])
+        response = self._subscribe(
+            self._ws, "singleTask", [{"$type": "oid", "$value": self.id}, False]
+        )
 
-        return response[0]['fields']['public']['objects']['mainObject']['uuid']
+        return response[0]["fields"]["public"]["objects"]["mainObject"]["uuid"]
 
     def _get_exec_time(self) -> int:
-        response = self._subscribe(self._ws, 'singleTask',
-            [{'$type': 'oid', '$value': self.id}, False])
+        response = self._subscribe(
+            self._ws, "singleTask", [{"$type": "oid", "$value": self.id}, False]
+        )
 
-        times = response[0]['fields']['times']
+        times = response[0]["fields"]["times"]
 
-        return (times['stopExec']['$date'] - times['startExec']['$date']) // 1000
+        return (times["stopExec"]["$date"] - times["startExec"]["$date"]) // 1000
 
     def _get_sample_bytes(self) -> bytes:
-        response = requests.get(self.sample_url,
-            headers=self._headers, stream=True,
-            cookies={'tokenLogin': self._login_token})
+        response = requests.get(
+            self.sample_url,
+            headers=self._headers,
+            stream=True,
+            cookies={"tokenLogin": self._login_token},
+        )
 
-        zip_file = ZipFile(BytesIO(response.content), 'r')
+        print(response.content[:100])
+        zip_file = ZipFile(BytesIO(response.content), "r")
 
         fileinfo = zip_file.infolist()[0]
 
         return zip_file.read(fileinfo, self._default_zip_password)
 
     def _get_connections_num(self) -> int:
-        response = self._subscribe(self._ws, 'ipsCounter', [
-            {
-                '$type': 'oid',
-                '$value': self.id,
-            },
-            False
-        ])
+        response = self._subscribe(
+            self._ws,
+            "ipsCounter",
+            [
+                {
+                    "$type": "oid",
+                    "$value": self.id,
+                },
+                False,
+            ],
+        )
 
-        return response[0]['fields']['count']
+        return response[0]["fields"]["count"]
 
     def _get_connections(self) -> list[dict]:
-        response = self._subscribe(self._ws, 'ips', [
-            {
-                'taskId': {
-                    '$type': 'oid',
-                    '$value': self.id,
+        response = self._subscribe(
+            self._ws,
+            "ips",
+            [
+                {
+                    "taskId": {
+                        "$type": "oid",
+                        "$value": self.id,
+                    },
+                    "searchParam": None,
                 },
-                'searchParam': None,
-            },
-            self.connections_num
-        ])
+                self.connections_num,
+            ],
+        )
 
         return [
             {
-                'ip': item['fields']['ip'],
-                'port': item['fields']['port'],
-                'send': item['fields']['traffic']['send'],
-                'recv': item['fields']['traffic']['recv'],
-                'domain': item['fields'].get('domain', None),
+                "ip": item["fields"]["ip"],
+                "port": item["fields"]["port"],
+                "send": item["fields"]["traffic"]["send"],
+                "recv": item["fields"]["traffic"]["recv"],
+                "domain": item["fields"].get("domain", None),
             }
             for item in response
         ]
@@ -188,8 +212,9 @@ class AnyRunTask:
 
     @cached_property
     def touched_files_num(self) -> int:
-        return sum(x['fields']['events_counters']['dropped_files']
-                   for x in self.processes)
+        return sum(
+            x["fields"]["events_counters"]["dropped_files"] for x in self.processes
+        )
 
     @cached_property
     def sample_uuid(self) -> str:
@@ -198,12 +223,13 @@ class AnyRunTask:
     @cached_property
     def sample_url(self) -> str:
         return self._content_base_url.format(
-            task_uuid=self.uuid, object_id=self.sample_uuid)
+            task_uuid=self.uuid, object_id=self.sample_uuid
+        )
 
     @cached_property
     def sample_bytes(self) -> str:
         if self._login_token is None:
-            raise PermissionError('You need to provide login token to get the sample')
+            raise PermissionError("You need to provide login token to get the sample")
 
         return self._get_sample_bytes()
 
@@ -221,25 +247,61 @@ class AnyRunTask:
 
     @cached_property
     def ips(self) -> list[str]:
-        return [item['ip'] for item in self.connections]
+        return [item["ip"] for item in self.connections]
 
     @cached_property
     def domains(self) -> list[str]:
-        return list(set(
-            item['domain'] for item in self.connections
-            if item['domain'] is not None
-        ))
+        return list(
+            set(
+                item["domain"]
+                for item in self.connections
+                if item["domain"] is not None
+            )
+        )
 
     @cached_property
     def traffic_send(self) -> int:
-        return sum(item['send'] for item in self.connections)
+        return sum(item["send"] for item in self.connections)
 
     @cached_property
     def traffic_recv(self) -> int:
-        return sum(item['recv'] for item in self.connections)
+        return sum(item["recv"] for item in self.connections)
+
+    def get_public_tasks(self, limit: int = 50, offset: int = 0) -> list[str]:
+        response = self._subscribe(
+            self._ws,
+            "publicTasks",
+            [
+                {
+                    "isPublic": True,
+                    "hash": "",
+                    # File, not url
+                    "runtype": ["1"],
+                    # Not malicious
+                    "verdict": [0],
+                    # PE EXE
+                    "ext": ["0"],
+                    "ip": "",
+                    "domain": "",
+                    "fileHash": "",
+                    "country": "",
+                    "mitreId": "",
+                    "sid": 0,
+                    "significant": False,
+                    "dateRange": [],
+                    "tag": "",
+                    "skip": offset,
+                    "limit": limit,
+                    "firstTaskId": None,
+                }
+            ],
+        )
+
+        return [item["fields"]["uuid"] for item in response]
+
 
 class CachedAnyRunTask:
-    _database_path: str = '_cache/samples'
+    _database_path: str = "_cache/samples"
 
     def __init__(self, uuid: str, login_token: str = None):
         self._db: shelve.Shelf = None

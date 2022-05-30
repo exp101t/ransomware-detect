@@ -1,35 +1,35 @@
 _bad_functions = [
     # Traditional Code Injection
-    'ReadProcessMemory',
-    'WriteProcessMemory',
-    'CreateRemoteThread',
-    'CreateRemoteThreadEx',
-    'NtWriteVirtualMemory',
+    "ReadProcessMemory",
+    "WriteProcessMemory",
+    "CreateRemoteThread",
+    "CreateRemoteThreadEx",
+    "NtWriteVirtualMemory",
     # Memory allocation in foreign process
-    'VirtualAllocEx',
-    'VirtualQueryEx',
-    'VirtualProtectEx',
+    "VirtualAllocEx",
+    "VirtualQueryEx",
+    "VirtualProtectEx",
     # APC Injection
-    'QueueUserAPC',
+    "QueueUserAPC",
     # Atom Bombing
-    'GlobalAddAtom',
-    'NtQueueApcThread',
+    "GlobalAddAtom",
+    "NtQueueApcThread",
     # Process Hollowing
-    'ZwUnmapViewOfSection',
-    'NtUnmapViewOfSection',
-    'SetThreadContext',
+    "ZwUnmapViewOfSection",
+    "NtUnmapViewOfSection",
+    "SetThreadContext",
     # Debugger detection
-    'IsDebugged',
-    'IsDebuggerPresent',
-    'QueryInformationProcess',
-    'NtGlobalFlags',
-    'CheckRemoteDebuggerPresent',
-    'SetInformationThread',
-    'DebugActiveProcess',
+    "IsDebugged",
+    "IsDebuggerPresent",
+    "QueryInformationProcess",
+    "NtGlobalFlags",
+    "CheckRemoteDebuggerPresent",
+    "SetInformationThread",
+    "DebugActiveProcess",
     # Dynamic DLL Loading
-    'GetProcAddress',
-    'LoadLibraryA',
-    'LoadLibraryW',
+    "GetProcAddress",
+    "LoadLibraryA",
+    "LoadLibraryW",
 ]
 
 

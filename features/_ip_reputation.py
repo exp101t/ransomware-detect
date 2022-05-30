@@ -3,11 +3,9 @@ import socket
 
 import requests
 
-_api_url = 'https://api.abuseipdb.com/api/v2/check'
+_api_url = "https://api.abuseipdb.com/api/v2/check"
 
-_headers = {
-    'Key': open('_secrets/abuseipdb_token.txt').read()
-}
+_headers = {"Key": open("_secrets/abuseipdb_token.txt").read()}
 
 _ip_num_threshold = 50
 
@@ -30,9 +28,6 @@ def get_ip_reputation(ip: str | list[str]) -> int:
     if ipaddress.ip_address(ip).is_private:
         return 0
 
-    response = requests.get(
-        _api_url,
-        headers=_headers,
-        params={'ipAddress': ip}).json()
+    response = requests.get(_api_url, headers=_headers, params={"ipAddress": ip}).json()
 
-    return response['data']['abuseConfidenceScore']
+    return response["data"]["abuseConfidenceScore"]
